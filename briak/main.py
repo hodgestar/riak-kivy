@@ -13,6 +13,7 @@ from kivy.uix.scrollview import ScrollView
 
 
 def create_test_data(client, n):
+    """Helper function for creating test data."""
     for i in range(n):
         r = RiakObject(client, client.bucket("test.bucket.%d" % i))
         r.set_data({"foo": i, "bar": "baz"})
@@ -23,7 +24,6 @@ class AppWidget(Widget):
     def __init__(self, client):
         super(AppWidget, self).__init__()
         self.client = client
-        create_test_data(client, 6)
         self.bucket_list = BucketList(self)
         self.key_list = KeyList(self)
         self.key_data = KeyData(self)
@@ -50,8 +50,7 @@ class AppWidget(Widget):
 class AppList(StackLayout):
 
     def __init__(self, app):
-        super(AppList, self).__init__()
-        self.bind(minimum_height=self.setter('height'))
+        super(AppList, self).__init__(spacing=2, size_hint=(None, None))
         self.app = app
 
         self.title = Label(text="No title yet", height=30)
@@ -59,7 +58,7 @@ class AppList(StackLayout):
 
         self.add_buttons()
 
-        scroll = ScrollView()
+        scroll = ScrollView(size_hint_y=None, height=600 - self.height)
         self.add_widget(scroll)
 
         self.layout = GridLayout(cols=1, size_hint_y=None)
@@ -68,6 +67,15 @@ class AppList(StackLayout):
 
     def add_buttons(self):
         pass
+
+    def clear_list(self):
+        self.layout.clear_widgets()
+
+    def add_item(self, item):
+        item.size_hint_y = None
+        item.height = 40
+        self.layout.add_widget(item)
+        return item
 
 
 class BucketList(AppList):
@@ -81,16 +89,15 @@ class BucketList(AppList):
         self.add_widget(refresh)
 
     def refresh(self, _refresh_btn=None):
-        self.layout.clear_widgets()
+        self.clear_list()
         buckets = self.app.client.get_buckets()
         buckets.sort()
         if not buckets:
-            self.layout.add_widget(Label(text="Can has bucket?"))
+            self.add_item(Label(text="Can has bucket?"))
         for bucket in buckets:
-            button = Button(text=bucket)
+            button = self.add_item(Button(text=bucket))
             button.bucket = bucket
             button.bind(on_press=self.bucket_clicked)
-            self.layout.add_widget(button)
 
     def bucket_clicked(self, button):
         bucket = self.app.client.bucket(button.bucket)
@@ -125,18 +132,17 @@ class KeyList(AppList):
             return
         self.bucket = bucket
         self.title.text = "Bucket: %s" % bucket.get_name()
-        self.layout.clear_widgets()
+        self.clear_list()
 
         keys = bucket.get_keys()
         keys.sort()
         if not keys:
-            self.layout.add_widget(Label(text="Can has key?"))
+            self.add_item(Label(text="Can has key?"))
         for key in keys:
-            button = Button(text=key)
+            button = self.add_item(Button(text=key))
             button.key = key
             button.bucket = bucket
             button.bind(on_press=self.key_clicked)
-            self.layout.add_widget(button)
 
     def key_clicked(self, button):
         self.app.switch_to_key(button.bucket, button.key)
@@ -171,16 +177,15 @@ class KeyData(AppList):
         self.bucket, self.key = bucket, key
 
         self.title.text = "Key: %s (%s)" % (key, bucket.get_name())
-        self.layout.clear_widgets()
+        self.clear_list()
 
         robj = bucket.get(key)
         data = robj.get_data()
 
         if not data:
-            self.layout.add_widget(Label(text="Can has data?"))
+            self.add_item(Label(text="Can has data?"))
         for key, value in sorted(data.items(), key=lambda t: t[0]):
-            label = Label(text="%s: %s" % (key, value))
-            self.layout.add_widget(label)
+            self.add_item(Label(text="%s: %s" % (key, value)))
 
 
 class MyApp(App):
