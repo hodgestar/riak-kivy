@@ -49,7 +49,7 @@ class AppWidget(Widget):
 class BucketList(StackLayout):
     def __init__(self, app):
         super(BucketList, self).__init__()
-        self.bind(minimum_height=self.setter('height'))
+        self.bind(minimum_height=app.setter('height'))
         self.app = app
 
         title = Label(text="Riak Buckets")
